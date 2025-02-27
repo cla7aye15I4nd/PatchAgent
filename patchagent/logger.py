@@ -1,7 +1,7 @@
 import logging
-import os
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 from colorama import Fore, Style, init
 
@@ -47,10 +47,10 @@ def setup_logger(
     logger.setLevel(level)
 
     if not log_file:
-        log_dir = "logs"
-        os.makedirs(log_dir, exist_ok=True)
+        log_path = Path(__file__).parent / "logs"
+        log_path.mkdir(exist_ok=True)
         current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        log_file = os.path.join(log_dir, f"{current_time}.log")
+        log_file = (log_path / f"{current_time}.log").resolve()
 
     file_handler = RotatingFileHandler(log_file, maxBytes=max_size, backupCount=backups)
     file_handler.setLevel(level)
