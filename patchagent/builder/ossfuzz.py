@@ -140,11 +140,23 @@ class OSSFuzzBuilder(Builder):
             cwd=self.workspace / self.hash_patch(patch) / self.fuzz_tooling_path.name,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
-            stderr=subprocess_none_pipe(),
+            stderr=subprocess.PIPE,
         )
 
-        report_bytes = process.communicate(timeout=self.replay_poc_timeout)[0]
-        return parse_sanitizer_report(report_bytes.decode(errors="ignore"), self.sanitizer, source_path=self.source_path)
+        stdout, stderr = process.communicate(timeout=self.replay_poc_timeout)
+
+        if process.returncode == 0:
+            return None
+
+        for report_bytes in [stdout, stderr]:
+            if (
+                report := parse_sanitizer_report(
+                    report_bytes.decode(errors="ignore"),
+                    self.sanitizer,
+                    source_path=self.source_path,
+                )
+            ) is not None:
+                return report
 
     @cached_property
     def language(self) -> Lang:
