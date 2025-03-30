@@ -57,6 +57,7 @@ if __name__ == "__main__":
             ),
         )
 
+        patchtask.initialize()
         print(f"Patch: {patchtask.repair(agent_generator())}")
 
 # set -a; source .env; set +a;

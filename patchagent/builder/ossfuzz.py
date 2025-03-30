@@ -9,16 +9,19 @@ from typing import Optional
 import yaml
 
 from patchagent.builder import Builder
+from patchagent.builder.utils import (
+    BuilderProcessError,
+    DockerUnavailableError,
+    safe_subprocess_run,
+)
 from patchagent.lang import Lang
 from patchagent.logger import logger
 from patchagent.lsp.hybridc import HybridCServer
 from patchagent.lsp.java import JavaLanguageServer
 from patchagent.lsp.language import LanguageServer
 from patchagent.parser import Sanitizer, SanitizerReport, parse_sanitizer_report
+from patchagent.parser.unknown import UnknownSanitizerReport
 from patchagent.utils import bear_path, subprocess_none_pipe
-
-
-class DockerUnavailableError(Exception): ...
 
 
 class OSSFuzzBuilder(Builder):
@@ -74,6 +77,23 @@ class OSSFuzzBuilder(Builder):
     def build_finish_indicator(self, patch: str) -> Path:
         return self.workspace / self.hash_patch(patch) / ".build"
 
+    def _build_image(self, fuzz_tooling_path: Path, tries: int = 3) -> None:
+        for _ in range(tries):
+            process = subprocess.Popen(
+                ["infra/helper.py", "build_image", "--pull", self.project],
+                cwd=fuzz_tooling_path,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+
+            _, stderr = process.communicate()
+            if process.returncode == 0:
+                return
+
+            logger.warning(f"[🔥] Failed to build image for {self.project}: {stderr.decode(errors='ignore')}")
+
+        raise DockerUnavailableError(stderr.decode(errors="ignore"))
+
     def build(self, patch: str = "") -> None:
         if self.build_finish_indicator(patch).is_file():
             return
@@ -87,37 +107,30 @@ class OSSFuzzBuilder(Builder):
         shutil.copytree(self.source_path, source_path, symlinks=True)
         shutil.copytree(self.fuzz_tooling_path, fuzz_tooling_path, symlinks=True)
 
-        subprocess.run(
-            ["patch", "-p1"],
-            cwd=source_path,
-            input=patch.encode(),
-            stdout=subprocess_none_pipe(),
-            stderr=subprocess_none_pipe(),
-            check=True,
+        safe_subprocess_run(["patch", "-p1"], source_path, input=patch.encode())
+
+        self._build_image(fuzz_tooling_path)
+
+        safe_subprocess_run(
+            [
+                "infra/helper.py",
+                "build_fuzzers",
+                "--sanitizer",
+                self.SANITIZER_MAP[self.sanitizer],
+                "--clean",
+                self.project,
+                source_path,
+            ],
+            fuzz_tooling_path,
         )
 
-        _build_image = subprocess.Popen(
-            ["infra/helper.py", "build_image", "--pull", self.project],
-            cwd=fuzz_tooling_path,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        _, stderr = _build_image.communicate()
-        if _build_image.returncode != 0:
-            raise DockerUnavailableError(stderr.decode(errors="ignore"))
-
-        subprocess.check_call(
-            ["infra/helper.py", "build_fuzzers", "--sanitizer", self.SANITIZER_MAP[self.sanitizer], "--clean", self.project, source_path],
-            cwd=fuzz_tooling_path,
-            stdout=subprocess_none_pipe(),
-            stderr=subprocess_none_pipe(),
-        )
-
-        subprocess.check_call(
-            ["infra/helper.py", "check_build", self.project],
-            cwd=fuzz_tooling_path,
-            stdout=subprocess_none_pipe(),
-            stderr=subprocess_none_pipe(),
+        safe_subprocess_run(
+            [
+                "infra/helper.py",
+                "check_build",
+                self.project,
+            ],
+            fuzz_tooling_path,
         )
 
         self.build_finish_indicator(patch).write_text(patch)
@@ -129,34 +142,31 @@ class OSSFuzzBuilder(Builder):
         assert self.build_finish_indicator(patch).is_file(), "Build failed"
 
         logger.info(f"[🔄] Replaying {self.project}/{harness_name} with PoC {poc_path} and patch {self.hash_patch(patch)}")
-        process = subprocess.Popen(
-            [
-                "infra/helper.py",
-                "reproduce",
-                self.project,
-                harness_name,
-                poc_path,
-            ],
-            cwd=self.workspace / self.hash_patch(patch) / self.fuzz_tooling_path.name,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
 
-        stdout, stderr = process.communicate(timeout=self.replay_poc_timeout)
+        try:
+            safe_subprocess_run(
+                [
+                    "infra/helper.py",
+                    "reproduce",
+                    self.project,
+                    harness_name,
+                    poc_path,
+                ],
+                self.workspace / self.hash_patch(patch) / self.fuzz_tooling_path.name,
+                timeout=self.replay_poc_timeout,
+            )
+        except BuilderProcessError as e:
+            for report in [e.stdout, e.stderr]:
+                if (
+                    report := parse_sanitizer_report(
+                        report,
+                        self.sanitizer,
+                        source_path=self.source_path,
+                    )
+                ) is not None:
+                    return report
 
-        if process.returncode == 0:
-            return None
-
-        for report_bytes in [stdout, stderr]:
-            if (
-                report := parse_sanitizer_report(
-                    report_bytes.decode(errors="ignore"),
-                    self.sanitizer,
-                    source_path=self.source_path,
-                )
-            ) is not None:
-                return report
+            return UnknownSanitizerReport(e.stdout, e.stderr)
 
     @cached_property
     def language(self) -> Lang:
@@ -191,16 +201,7 @@ class OSSFuzzBuilder(Builder):
         compile_commands = clangd_source / "compile_commands.json"
         if not compile_commands.is_file():
             logger.info("[🔋] Generating compile_commands.json")
-            if (
-                subprocess.run(
-                    ["infra/helper.py", "build_image", "--pull", self.project],
-                    cwd=clangd_fuzz_tooling,
-                    stdout=subprocess_none_pipe(),
-                    stderr=subprocess_none_pipe(),
-                ).returncode
-                != 0
-            ):
-                raise DockerUnavailableError()
+            self._build_image(clangd_fuzz_tooling)
 
             shutil.copy2(bear_path() / "helper.py", clangd_fuzz_tooling / "infra/helper.py")
             shutil.copytree(bear_path(), clangd_source / ".bear", symlinks=True)

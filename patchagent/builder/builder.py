@@ -1,5 +1,4 @@
 import shutil
-import subprocess
 import tempfile
 from functools import cached_property
 from pathlib import Path
@@ -7,11 +6,11 @@ from typing import Optional
 
 from git import Repo
 
+from patchagent.builder.utils import BuilderProcessError, safe_subprocess_run
 from patchagent.lang import Lang
 from patchagent.logger import logger
 from patchagent.lsp.language import LanguageServer
 from patchagent.parser import SanitizerReport
-from patchagent.utils import subprocess_none_pipe
 
 
 class Builder:
@@ -60,25 +59,39 @@ class Builder:
     def language_server(self) -> LanguageServer:
         raise NotImplementedError("language_server not implemented")
 
-    def format_patch(self, patch: str) -> str:
+    def check_patch(self, patch: str) -> None:
+        logger.info("[🔍] Checking patch")
+
+        self.source_repo.git.reset("--hard")
+        self.source_repo.git.clean("-fdx")
+
+        safe_subprocess_run(
+            ["git", "apply"],  # empty patch is not allowed
+            Path(self.source_repo.working_dir),
+            input=patch.encode(),
+        )
+
+    def format_patch(self, patch: str) -> Optional[str]:
         logger.info("[🩹] Formatting patch")
 
-        self.source_repo.git.reset("--hard", "HEAD")
-        subprocess.run(
-            ["patch", "-p1"],
-            cwd=self.source_repo.working_dir,
-            input=patch.encode(),
-            stdout=subprocess_none_pipe(),
-            stderr=subprocess_none_pipe(),
-            check=True,
-        )
-        return self.source_repo.git.diff("HEAD", "--diff-filter=M")
+        self.source_repo.git.reset("--hard")
+        self.source_repo.git.clean("-fdx")
 
-    def build(self, patch: str) -> None:
+        try:
+            safe_subprocess_run(
+                ["patch", "-F", "3", "--no-backup-if-mismatch", "-p1"],
+                Path(self.source_repo.working_dir),
+                input=patch.encode(),
+            )
+
+            return safe_subprocess_run(["git", "diff"], Path(self.source_repo.working_dir)).decode(errors="ignore")
+        except BuilderProcessError:
+            return None
+
+    def build(self, patch: str = "") -> None:
         raise NotImplementedError("build not implemented")
 
     def replay(self, harness_name: str, poc_path: Path, patch: str = "") -> Optional[SanitizerReport]:
-        raise NotImplementedError("run_poc not implemented")
+        raise NotImplementedError("replay not implemented")
 
-    def function_test(self, patch: str = "") -> bool:
-        return True
+    def function_test(self, patch: str = "") -> None: ...

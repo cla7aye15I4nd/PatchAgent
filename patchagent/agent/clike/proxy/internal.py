@@ -146,13 +146,18 @@ def validate(task: PatchTask, patch: str, auto_hint=False) -> Tuple[Dict, str]:
         raise AgentStopException("The number of validation tries has reached the maximum limit.")
 
     patch, _ = revise_patch(patch, task.builder.source_path)
-    ret, real_patch, report = task.validate(patch)
+    patch = task.builder.format_patch(patch) or patch
 
-    if ret == ValidationResult.Success:
-        task.current_context.patch = real_patch
-        raise PatchFoundException(real_patch)
+    ret, report = task.validate(patch)
+
+    if ret == ValidationResult.BugFree:
+        task.current_context.patch = patch
+        raise PatchFoundException(patch)
+
+    if ret != ValidationResult.BugDetected:
+        report = ret.value
 
     header = "Sorry, the patch is incorrect. Here is the applied patch, which may have been revised and differ from the original:"
     desc = f"Here is the validation report:\n{report}"
-    result = f"{header}\n{real_patch}\n{desc}"
-    return {"patch": real_patch}, result
+    result = f"{header}\n{patch}\n{desc}"
+    return {"patch": patch}, result

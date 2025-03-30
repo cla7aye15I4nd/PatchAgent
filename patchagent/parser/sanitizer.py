@@ -6,6 +6,7 @@ from patchagent.parser.cwe import CWE
 
 
 class Sanitizer(StrEnum):
+    UnknownSanitizer = "UnknownSanitizer"
     AddressSanitizer = "AddressSanitizer"
     LeakAddressSanitizer = "LeakAddressSanitizer"
     UndefinedBehaviorSanitizer = "UndefinedBehaviorSanitizer"

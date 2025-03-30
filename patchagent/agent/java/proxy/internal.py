@@ -60,25 +60,20 @@ def validate(task: PatchTask, patch: str, auto_hint=False) -> Tuple[Dict, str]:
     if num_tries >= MAX_VALIDATION_TRIES:
         raise AgentStopException("The number of validation tries has reached the maximum limit.")
 
-    revised_patch = revise_patch(patch)
-    ret, real_patch, report = task.validate(revised_patch)
+    patch = revise_patch(patch)
+    patch = task.builder.format_patch(patch) or patch
 
-    if ret == ValidationResult.Success:
-        task.current_context.patch = real_patch
-        raise PatchFoundException(real_patch)
+    ret, report = task.validate(patch)
 
-    if ret == ValidationResult.InvalidPatchFormat:
-        report = (
-            "Invalid patch format, you may view the code to get the context.\n"
-            "1. At the beginning and end of the hunk, there must be at least 1 lines of context.\n"
-            "2. DO not use newline and comment as the start or the end of the context.\n"
-            "3. Do not add comments in the patch.\n"
-            "4. ALL changes must start with +, -.\n"
-            "5. If you use a new package, you must import it.\n"
-        )
+    if ret == ValidationResult.BugFree:
+        task.current_context.patch = patch
+        raise PatchFoundException(patch)
+
+    if ret != ValidationResult.BugDetected:
+        report = ret.value
 
     header = "Sorry, the patch is incorrect. Here is the applied patch, which may have been revised and differ from the original:"
     desc = f"Here is the validation report:\n{report}"
 
     result = f"{header}\n Here is your generated {patch} \n{desc}"
-    return {"patch": real_patch}, result
+    return {"patch": patch}, result
