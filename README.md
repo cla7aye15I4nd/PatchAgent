@@ -46,26 +46,29 @@ cp .env.template .env
 
 ## 💻 Usage Example
 
-PatchAgent can be used to repair real-world bugs. Here's a simple example to repair an OSS-Fuzz issue:
+PatchAgent can be used to repair real-world bugs. Here's a simple example:
 
 ```python
 from patchagent.agent.generator import agent_generator
-from patchagent.builder import OSSFuzzBuilder
+from patchagent.builder import OSSFuzzBuilder, OSSFuzzPoC
+from patchagent.parser.sanitizer import Sanitizer
 from patchagent.task import PatchTask
 
-# Initialize the task with a crash reproduction
+# Initialize the repair task
 patchtask = PatchTask(
-    ["poc.bin"],                         # Proof of Concept file(s)
-    "libpng_read_fuzzer",                # Name of the fuzz target
+    [OSSFuzzPoC("poc.bin", "libpng_read_fuzzer")],  # Proof of Concept file with target
     OSSFuzzBuilder(
         "libpng",                        # Project name
-        "/path/to/libpng",               # Source path
+        "/path/to/libpng",               # Source code path
         "/path/to/oss-fuzz",             # OSS-Fuzz path
+        [Sanitizer.AddressSanitizer],    # Sanitizer to use
     ),
 )
 
-# Run the repair process
-patchtask.repair(agent_generator(patchtask))
+# Initialize and run the repair process
+patchtask.initialize()
+patch = patchtask.repair(agent_generator())
+print(f"Generated patch: {patch}")
 ```
 
 ## 🛠️ Development Setup
@@ -101,8 +104,6 @@ Below is a sample of the vulnerabilities fixed by PatchAgent. More will be discl
 | [hdf5](https://github.com/HDFGroup/hdf5) | 0.6k | [#5201](https://github.com/HDFGroup/hdf5/pull/5201), [#5210](https://github.com/HDFGroup/hdf5/pull/5210) |
 | [libredwg](https://github.com/LibreDWG/libredwg) | 1.0k | [#1061](https://github.com/LibreDWG/libredwg/pull/1061) |
 | [Pcap++](https://github.com/seladb/PcapPlusPlus) | 2.8k | [#1678](https://github.com/seladb/PcapPlusPlus/pull/1678), [#1680](https://github.com/seladb/PcapPlusPlus/pull/1680), [#1699](https://github.com/seladb/PcapPlusPlus/pull/1699) |
-
-
 
 ## 📄 License
 
