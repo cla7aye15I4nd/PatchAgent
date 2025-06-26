@@ -91,6 +91,7 @@ This will set up a fully configured development environment with all the necessa
 - [AddressSanitizer (ASan)](https://github.com/google/sanitizers/wiki/AddressSanitizer)
 - [MemorySanitizer (MSan)](https://github.com/google/sanitizers/wiki/MemorySanitizer)
 - [UndefinedBehaviorSanitizer (UBSan)](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
+- [ThreadSanitizer (TSan)](https://clang.llvm.org/docs/ThreadSanitizer.html)
 - [Jazzer (Java fuzzing)](https://github.com/CodeIntelligenceTesting/jazzer)
 
 ## 🏆 Fixed Vulnerabilities
