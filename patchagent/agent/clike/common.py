@@ -1,13 +1,13 @@
 import random
 from typing import Any
 
-from langchain.agents import AgentExecutor
-from langchain.agents.format_scratchpad.openai_tools import (
+from langchain_classic.agents import AgentExecutor
+from langchain_classic.agents.format_scratchpad.openai_tools import (
     format_to_openai_tool_messages,
 )
-from langchain.agents.output_parsers.openai_tools import OpenAIToolsAgentOutputParser
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_classic.agents.output_parsers.openai_tools import OpenAIToolsAgentOutputParser
 from langchain_core.agents import AgentAction, AgentFinish
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.utils.function_calling import convert_to_openai_tool
 from pydantic_core import ValidationError
 

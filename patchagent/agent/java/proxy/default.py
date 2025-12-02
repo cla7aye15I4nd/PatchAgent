@@ -1,4 +1,4 @@
-from langchain.tools import StructuredTool
+from langchain_core.tools import StructuredTool
 
 from patchagent.agent.java.proxy import internal
 from patchagent.logger import logger

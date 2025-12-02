@@ -1,4 +1,4 @@
-from langchain.tools import StructuredTool
+from langchain_core.tools import StructuredTool
 
 from patchagent.agent.base import AgentStopException, PatchFoundException
 from patchagent.agent.clike.proxy import internal
