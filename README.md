@@ -113,7 +113,7 @@ Below is a sample of the vulnerabilities fixed by PatchAgent. More will be discl
 | [Pcap++](https://github.com/seladb/PcapPlusPlus) | 2.8k | [#1678](https://github.com/seladb/PcapPlusPlus/pull/1678), [#1680](https://github.com/seladb/PcapPlusPlus/pull/1680), [#1699](https://github.com/seladb/PcapPlusPlus/pull/1699) |
 | [yasm](https://github.com/yasm/yasm)| 1.4k | [#241](https://github.com/yasm/yasm/pull/241), [#242](https://github.com/yasm/yasm/pull/242), [#243](https://github.com/yasm/yasm/pull/243), [#244](https://github.com/yasm/yasm/pull/244), [#263](https://github.com/yasm/yasm/pull/263)| 
 | [gtp5g](https://github.com/free5gc/gtp5g) | 76 | [#166](https://github.com/free5gc/gtp5g/pull/166) | 
-
+| [Linux]() | oo | [cafc66](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=cafc6679824a026998d93e7435f6005f64e515d2), [856db3](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=856db37592021e9155384094e331e2d4589f28b1) |
 ## 📄 License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
