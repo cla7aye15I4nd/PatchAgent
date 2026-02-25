@@ -111,6 +111,8 @@ Below is a sample of the vulnerabilities fixed by PatchAgent. More will be discl
 | [hdf5](https://github.com/HDFGroup/hdf5) | 0.6k | [#5201](https://github.com/HDFGroup/hdf5/pull/5201), [#5210](https://github.com/HDFGroup/hdf5/pull/5210) |
 | [libredwg](https://github.com/LibreDWG/libredwg) | 1.0k | [#1061](https://github.com/LibreDWG/libredwg/pull/1061) |
 | [Pcap++](https://github.com/seladb/PcapPlusPlus) | 2.8k | [#1678](https://github.com/seladb/PcapPlusPlus/pull/1678), [#1680](https://github.com/seladb/PcapPlusPlus/pull/1680), [#1699](https://github.com/seladb/PcapPlusPlus/pull/1699) |
+| [yasm](https://github.com/yasm/yasm)| 1.4k | [#241](https://github.com/yasm/yasm/pull/241), [#242](https://github.com/yasm/yasm/pull/242), [#243](https://github.com/yasm/yasm/pull/243), [#244](https://github.com/yasm/yasm/pull/244), [#263](https://github.com/yasm/yasm/pull/263)| 
+| [gtp5g](https://github.com/free5gc/gtp5g) | 76 | [#166](https://github.com/free5gc/gtp5g/pull/166) | 
 
 ## 📄 License
 
